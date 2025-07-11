@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Reviewer</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-header">
+            <h2>Document Reviewer</h2>
+        </div>
+        <div id="chat-messages">
+            <div class="message bot-message">
+                <p>Hello! Ask me a question about your documents.</p>
+            </div>
+        </div>
+        <form id="chat-form">
+            <input type="text" id="user-input" autocomplete="off" placeholder="Type your message...">
+            <button type="submit">Send</button>
+        </form>
+    </div>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const chatMessages = document.getElementById('chat-messages');
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userMessage = userInput.value.trim();
+            if (!userMessage) return;
+
+            // Display user message
+            addMessage(userMessage, 'user-message');
+            userInput.value = '';
+            addMessage('...', 'bot-message', true); // Add a temporary thinking message
+
+            try {
+                // Send message to backend
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: userMessage })
+                });
+
+                const data = await response.json();
+                removeThinkingMessage();
+
+                if (response.ok) {
+                    addMessage(data.answer, 'bot-message');
+                } else {
+                    addMessage(`Error: ${data.error}`, 'bot-message error');
+                }
+
+            } catch (error) {
+                removeThinkingMessage();
+                addMessage(`Network Error: ${error.message}`, 'bot-message error');
+            }
+        });
+
+        function addMessage(message, className, isThinking = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${className}`;
+            const p = document.createElement('p');
+            p.textContent = message;
+            messageDiv.appendChild(p);
+            if(isThinking) {
+                messageDiv.id = 'thinking-message';
+            }
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function removeThinkingMessage(){
+            const thinkingDiv = document.getElementById('thinking-message');
+            if(thinkingDiv) {
+                thinkingDiv.remove();
+            }
+        }
+    </script>
+</body>
+</html>
